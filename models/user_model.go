@@ -38,6 +38,11 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+func (u *User) BeforeUpdate(tx *gorm.DB) error {
+	u.UpdatedAt = time.Now()
+	return nil
+}
+
 func (u *User) CreateUser() (*User, error) {
 	if err := database.DB.Create(u).Error; err != nil {
 		log.Error().Err(err).Msg("Issue lie in the user_model/CreateUser")
@@ -55,7 +60,7 @@ func GetUserById(id string) (*User, error) {
 	return &user, nil
 }
 
-func GetUserByEmail(id string) (*User, error) {
+func GetUserByEmail(email string) (*User, error) {
 	var user User
 	if err := database.DB.Where("email = ?").First(&user).Error; err != nil {
 		log.Error().Err(err).Msg("Issue lie in the user_model/GetUserByEmail")
@@ -70,6 +75,25 @@ func UpdateUser(user User) error {
 		return err
 	}
 	return nil
+}
+
+func UpdateUserVerificationStatus(email string, status bool) error {
+	if err := database.DB.Model(&User{}).
+		Where("email = ?", email).
+		Update("verification_status", status).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in the user_model/UpdateUserVerificationStatus")
+		return err
+	}
+	return nil
+}
+
+func GetLastLogin(email string) (time.Time, error) {
+	userByEmail, err := GetUserByEmail(email)
+	if err != nil {
+		log.Error().Err(err).Msg("issue lie in the user_model/GetLastLogin")
+		return time.Time{}, err
+	}
+	return userByEmail.LastLogin, nil
 }
 
 func GetAllUsers() ([]User, error) {

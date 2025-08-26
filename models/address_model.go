@@ -1,6 +1,13 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/pratyush934/tradealpha/server/database"
+	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
+)
 
 type AddressModel struct {
 	Id        string    `gorm:"primaryKey" json:"id"`
@@ -12,4 +19,60 @@ type AddressModel struct {
 	Country   string    `gorm:"not null" json:"country"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (a *AddressModel) BeforeCreate(tx *gorm.DB) error {
+	a.Id = uuid.New().String()
+	a.CreatedAt = time.Now()
+	a.UpdatedAt = time.Now()
+
+	return nil
+}
+
+func (a *AddressModel) BeforeUpdate(tx *gorm.DB) error {
+	a.UpdatedAt = time.Now()
+	return nil
+}
+
+func (a *AddressModel) CreateAddress() (*AddressModel, error) {
+
+	if err := database.DB.Create(a).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in address_model/CreateAddress")
+		return nil, err
+	}
+	return a, nil
+}
+
+func AddressByUserId(userId string) (*[]AddressModel, error) {
+	var address []AddressModel
+	if err := database.DB.Where("user_id = ?", userId).Find(&address).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in address_model/AddressByUserId")
+		return nil, err
+	}
+	return &address, nil
+}
+
+func GetAddressByAddressId(id string) (*AddressModel, error) {
+	var address AddressModel
+	if err := database.DB.Where("address_id = ?", id).Find(&address).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in address_model/GetAddressByAddressId")
+		return nil, err
+	}
+	return &address, nil
+}
+
+func UpdateAddress(address *AddressModel) error {
+	if err := database.DB.Updates(address).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in address_model/UpdateAddress")
+		return err
+	}
+	return nil
+}
+
+func DeleteAddress(userId string) error {
+	return database.DB.Where("user_id = ?", userId).Delete(&AddressModel{}).Error
+}
+
+func DeleteAddressByAddressId(id string) error {
+	return database.DB.Where("address_id = ?", id).Delete(&AddressModel{}).Error
 }
