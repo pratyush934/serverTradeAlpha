@@ -8,3 +8,7 @@ type Role struct {
 	Description string `json:"description"`
 	CreatedAt   time.Time
 }
+
+func CreateRole() {
+
+}
