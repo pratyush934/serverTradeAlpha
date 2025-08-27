@@ -11,6 +11,8 @@ import (
 
 type User struct {
 	Id                 string              `gorm:"primaryKey;type:varchar(151)" json:"id"`
+	OAuthId            string              `json:"oauth_id"`
+	Provider           string              `json:"provider"`
 	Name               string              `gorm:"not null" json:"name"`
 	Email              string              `gorm:"not null;unique" json:"email"`
 	PhoneNumber        string              `json:"phoneNumber"`
@@ -51,21 +53,52 @@ func (u *User) CreateUser() (*User, error) {
 	return u, nil
 }
 
-func GetUserById(id string) (*User, error) {
-	var user User
-	if err := database.DB.Where("user_id = ?").First(&user).Error; err != nil {
-		log.Error().Err(err).Msg("Issue lie in the user_model/GetUserById")
+func GetAllUsers(limit, offset int) ([]User, error) {
+	var user []User
+	if err := database.DB.
+		Preload("Address").
+		Preload("PortFolio").
+		Preload("Transaction").
+		Preload("Notification").
+		Limit(limit).
+		Offset(offset).
+		Find(&user).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in user_model/GetAllUsers")
 		return nil, err
 	}
+	return user, nil
+
+}
+
+func GetUserById(id string) (*User, error) {
+	var user User
+	if err := database.DB.
+		Where("id = ?", id).
+		Preload("Address").
+		Preload("PortFolio").
+		Preload("Transaction").
+		Preload("Notification").
+		First(&user).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in user_model/GetAllUsers")
+		return nil, err
+	}
+
 	return &user, nil
 }
 
 func GetUserByEmail(email string) (*User, error) {
 	var user User
-	if err := database.DB.Where("email = ?").First(&user).Error; err != nil {
-		log.Error().Err(err).Msg("Issue lie in the user_model/GetUserByEmail")
+	if err := database.DB.
+		Where("email = ?", email).
+		Preload("Address").
+		Preload("PortFolio").
+		Preload("Transaction").
+		Preload("Notification").
+		First(&user).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in user_model/GetAllUsers")
 		return nil, err
 	}
+
 	return &user, nil
 }
 
@@ -96,19 +129,18 @@ func GetLastLogin(email string) (time.Time, error) {
 	return userByEmail.LastLogin, nil
 }
 
-func GetAllUsers() ([]User, error) {
-	var users []User
-	if err := database.DB.Find(&users).Error; err != nil {
-		log.Error().Err(err).Msg("Issue lie the user_model/GetAllUsers")
-		return nil, err
-	}
-	return users, nil
-}
-
 func DeleteUserById(id string) error {
-	return database.DB.Where("user_id = ?", id).Delete(&User{}).Error
+	return database.DB.Where("id = ?", id).Delete(&User{}).Error
 }
 
 func DeleteUserByEmail(email string) error {
 	return database.DB.Where("email = ?", email).Delete(&User{}).Error
+}
+
+func UpdateUserLastLogin(email string) error {
+	if err := database.DB.Model(&User{}).Where("email = ?", email).Update("last_login = ?", time.Now()).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in the portfolio_model/UpdateUserLastLogin")
+		return err
+	}
+	return nil
 }

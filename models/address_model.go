@@ -54,7 +54,7 @@ func AddressByUserId(userId string) (*[]AddressModel, error) {
 
 func GetAddressByAddressId(id string) (*AddressModel, error) {
 	var address AddressModel
-	if err := database.DB.Where("address_id = ?", id).Find(&address).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).Find(&address).Error; err != nil {
 		log.Error().Err(err).Msg("issue lie in address_model/GetAddressByAddressId")
 		return nil, err
 	}
@@ -74,5 +74,5 @@ func DeleteAddress(userId string) error {
 }
 
 func DeleteAddressByAddressId(id string) error {
-	return database.DB.Where("address_id = ?", id).Delete(&AddressModel{}).Error
+	return database.DB.Where("id = ?", id).Delete(&AddressModel{}).Error
 }

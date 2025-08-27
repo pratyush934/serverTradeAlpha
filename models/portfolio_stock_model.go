@@ -69,7 +69,7 @@ func GetPortfolioStockByStockIdAndPortfolioId(sid, pid string) (*[]PortFolioStoc
 
 func GetPortfolioStockById(id string) (*PortFolioStock, error) {
 	var portfolio *PortFolioStock
-	if err := database.DB.Where("portfolio_id = ?", id).Find(portfolio).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).Find(portfolio).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in portfolio_stock_model/GetPortfolioStockById")
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func UpdatePortfolioStock(portfolio *PortFolioStock) error {
 }
 
 func DeletePortfolioById(id string) error {
-	return database.DB.Where("portfolio_id = ?", id).Delete(&PortFolioStock{}).Error
+	return database.DB.Where("id = ?", id).Delete(&PortFolioStock{}).Error
 }
 
 func UpdatePortfolioStockAveragePrice(id, value string) error {

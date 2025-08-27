@@ -43,7 +43,11 @@ func (s *Stock) CreateStock() (*Stock, error) {
 
 func GetStockById(id string) (*Stock, error) {
 	var stock Stock
-	if err := database.DB.Where("stock_id = ?", id).First(&stock).Error; err != nil {
+	if err := database.DB.
+		Where("stock_id = ?", id).
+		Preload("PortFolioStock").
+		Preload("Transaction").
+		First(&stock).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in stock_model/GetStockById")
 		return nil, err
 	}
@@ -52,16 +56,23 @@ func GetStockById(id string) (*Stock, error) {
 
 func GetStockBySector(sector string) (*[]Stock, error) {
 	var stock []Stock
-	if err := database.DB.Where("sector = ?", sector).Find(&stock).Error; err != nil {
+	if err := database.DB.Where("sector = ?", sector).
+		Preload("PortFolioStock").
+		Preload("Transaction").
+		Find(&stock).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in stock_model/GetStockBySector")
 		return nil, err
 	}
 	return &stock, nil
 }
 
-func GetAllStocks() ([]Stock, error) {
+func GetAllStocks(limit, offset int) ([]Stock, error) {
 	var stock []Stock
-	if err := database.DB.Find(&stock).Error; err != nil {
+	if err := database.DB.
+		Preload("PortFolioStock").
+		Preload("Transaction").
+		Limit(limit).Offset(offset).
+		Find(&stock).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in stock_model/GetAllStocks")
 		return nil, err
 	}

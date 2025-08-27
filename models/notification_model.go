@@ -54,7 +54,7 @@ func UpdateNotification(notification *NotificationModel) error {
 
 func GetNotificationByNotificationId(id string) (*NotificationModel, error) {
 	var notification NotificationModel
-	if err := database.DB.Where("notification_id = ?", id).First(&notification).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).First(&notification).Error; err != nil {
 		log.Error().Err(err).Msg("issue lies at notification_model/GetNotificationByNotificationId")
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func DeleteNotification(userId string) error {
 }
 
 func DeleteNotificationByNId(id string) error {
-	return database.DB.Where("notification_id = ?", id).Error
+	return database.DB.Where("id = ?", id).Error
 }
 
 func MarkAsRead(id string) error {
@@ -82,7 +82,10 @@ func MarkAsRead(id string) error {
 func GetUnreadNotificationsCount() (int64, error) {
 	var count int64
 
-	if err := database.DB.Model(&NotificationModel{}).Where("read_status = ?", false).Count(&count).Error; err != nil {
+	if err := database.DB.
+		Model(&NotificationModel{}).
+		Where("read_status = ?", false).
+		Count(&count).Error; err != nil {
 		log.Error().Err(err).Msg("issue lies in the notification_model/GetUnreadNotification")
 		return 0, err
 	}

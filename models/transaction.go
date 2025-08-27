@@ -44,7 +44,7 @@ func (t *TransactionModel) CreateTransaction() (*TransactionModel, error) {
 
 func GetTransactionById(id string) (*TransactionModel, error) {
 	var tx TransactionModel
-	if err := database.DB.Where("transaction_id = ?", id).First(&tx).Error; err != nil {
+	if err := database.DB.Where("id = ?", id).First(&tx).Error; err != nil {
 		log.Error().Err(err).Msg("issue in transaction_model/GetTransactionById")
 		return nil, err
 	}

@@ -44,8 +44,13 @@ func (p *PortFolio) CreatePortfolio() (*PortFolio, error) {
 }
 
 func GetPortFolioById(id string) (*PortFolio, error) {
+
 	var portFolio PortFolio
-	if err := database.DB.Where("portfolio_id = ?", id).First(&portFolio).Error; err != nil {
+	if err := database.DB.
+		Preload("Transaction").
+		Preload("PortFolioStock").
+		Where("id = ?", id).
+		First(&portFolio).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetPortFolioById")
 		return nil, err
 	}
@@ -53,12 +58,30 @@ func GetPortFolioById(id string) (*PortFolio, error) {
 }
 
 func GetPortFolioByUserId(userId string) (*[]PortFolio, error) {
+
 	var portfolio []PortFolio
-	if err := database.DB.Where("user_id = ?", userId).Find(&portfolio).Error; err != nil {
+	if err := database.DB.
+		Where("user_id = ?", userId).
+		Preload("Transaction").
+		Preload("PortFolioStock").
+		First(&portfolio).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetPortFolioByUserId")
 		return nil, err
 	}
 	return &portfolio, nil
+}
+
+func GetAllPortFolioStock(limit, offset int) ([]PortFolio, error) {
+	var portfolio []PortFolio
+	if err := database.DB.
+		Preload("Transaction").
+		Preload("PortFolioStock").
+		Find(&portfolio).
+		Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetAllPortFolioStock")
+		return nil, err
+	}
+	return portfolio, nil
 }
 
 func UpdatePortFolio(portfolio PortFolio) error {
@@ -66,9 +89,11 @@ func UpdatePortFolio(portfolio PortFolio) error {
 }
 
 func UpdateTotalValue(id string, value int) error {
+
 	if err := database.DB.Where("user_id = ? ", id).Update("total_value = ?", value).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetPortFolioById")
 		return err
 	}
 	return nil
+
 }
