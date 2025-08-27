@@ -43,7 +43,7 @@ func (a *AddressModel) CreateAddress() (*AddressModel, error) {
 	return a, nil
 }
 
-func AddressByUserId(userId string) (*[]AddressModel, error) {
+func GetAddressByUserId(userId string) (*[]AddressModel, error) {
 	var address []AddressModel
 	if err := database.DB.Where("user_id = ?", userId).Find(&address).Error; err != nil {
 		log.Error().Err(err).Msg("issue lie in address_model/AddressByUserId")
@@ -61,12 +61,12 @@ func GetAddressByAddressId(id string) (*AddressModel, error) {
 	return &address, nil
 }
 
-func UpdateAddress(address *AddressModel) error {
+func UpdateAddress(address *AddressModel) (*AddressModel, error) {
 	if err := database.DB.Updates(address).Error; err != nil {
 		log.Error().Err(err).Msg("issue lie in address_model/UpdateAddress")
-		return err
+		return nil, err
 	}
-	return nil
+	return address, nil
 }
 
 func DeleteAddress(userId string) error {
