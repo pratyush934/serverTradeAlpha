@@ -52,6 +52,94 @@ func GetUserByEmail(c echo.Context) error {
 	})
 }
 
+func DeleteUser(c echo.Context) error {
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the userId", nil)
+	}
+
+	if err := models.DeleteUserById(userId); err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to delete the user", nil)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": "User deleted",
+		"status":  types.StatusOK,
+	})
+}
+
+func GetUserPortfolios(c echo.Context) error {
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the userId in GetUserPortfolios", nil)
+	}
+
+	portfolio, err := models.GetPortFolioByUserId(userId)
+
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the portfolio", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"portfolio": portfolio,
+	})
+}
+
+func GetUserTransactions(c echo.Context) error {
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the userId in GetUserTransaction", nil)
+	}
+
+	transactionsByUserId, err := models.GetTransactionsByUserId(userId)
+
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the transactionsById", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"transactions": transactionsByUserId,
+	})
+}
+
+func GetUserNotifications(c echo.Context) error {
+
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the userId", nil)
+	}
+
+	notificationByUserId, err := models.GetNotificationByUserId(userId)
+
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the notification with userid", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"notifications": notificationByUserId,
+	})
+}
+
+func UpdateUserVerificationStatus(c echo.Context) error {
+	email := c.Get("email").(string)
+
+	if email == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the email", nil)
+	}
+
+	if err := models.UpdateUserVerificationStatus(email, true); err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update verification", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": types.StatusOK,
+	})
+}
+
 /*
 GetAddresses - List user addresses
 AddAddress - Create new user address
@@ -94,6 +182,7 @@ func AddAddress(c echo.Context) error {
 	}
 
 	newAddress := models.AddressModel{
+		UserId:  userid,
 		Street:  addressModel.StreetName,
 		City:    addressModel.City,
 		ZipCode: addressModel.ZipCode,
@@ -147,7 +236,7 @@ func UpdateAddress(c echo.Context) error {
 	if existingAddress.UserId != userid {
 		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to update the userid", nil)
 	}
-
+	
 	existingAddress.Street = updateRequest.StreetName
 	existingAddress.ZipCode = updateRequest.ZipCode
 	existingAddress.City = updateRequest.City

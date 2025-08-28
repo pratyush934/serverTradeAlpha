@@ -120,6 +120,15 @@ func UpdateUserVerificationStatus(email string, status bool) error {
 	return nil
 }
 
+func UpdateLastLogin(email string, time time.Time) error {
+
+	if err := database.DB.Where("email = ?", email).Update("last_login = ?", time).Error; err != nil {
+		log.Error().Err(err).Msg("issue lie in the user_model/UpdateLastLogin")
+		return err
+	}
+	return nil
+}
+
 func GetLastLogin(email string) (time.Time, error) {
 	userByEmail, err := GetUserByEmail(email)
 	if err != nil {

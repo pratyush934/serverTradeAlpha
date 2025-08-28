@@ -2,11 +2,14 @@ package controller
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pratyush934/tradealpha/server/dto"
 	"github.com/pratyush934/tradealpha/server/models"
+	"github.com/pratyush934/tradealpha/server/types"
 	"github.com/pratyush934/tradealpha/server/util"
+	"github.com/rs/zerolog/log"
 )
 
 func LoginController(c echo.Context) error {
@@ -21,11 +24,27 @@ func LoginController(c echo.Context) error {
 
 	email := login.Email
 
-	_, err := models.GetUserByEmail(email)
+	candidate, err := models.GetUserByEmail(email)
+
 	if err == nil {
+
+		err2 := models.UpdateLastLogin(email, time.Now())
+
+		if err2 != nil {
+			log.Error().Err(err).Msg("Please check the UpdateLastLogin")
+			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "Please check the err2", err2)
+		}
+
+		token, err3 := util.CreateToken(candidate)
+
+		if err3 != nil {
+			log.Error().Err(err3).Msg("not able to generate token , err3")
+			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "Please check the err3", err3)
+		}
+
 		return c.JSON(http.StatusBadRequest, map[string]interface{}{
-			"message": "the user already exist",
-			"email":   email,
+			"message": "the user already exist, Login Successful",
+			"email":   token,
 		})
 	}
 
