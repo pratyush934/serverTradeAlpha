@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -53,6 +54,13 @@ func GetUserByEmail(c echo.Context) error {
 }
 
 func DeleteUser(c echo.Context) error {
+
+	role := c.Get("role").(int)
+
+	if role != 2 {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not an admin", nil)
+	}
+
 	userId := c.Get("userId").(string)
 
 	if userId == "" {
@@ -66,6 +74,34 @@ func DeleteUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "User deleted",
 		"status":  types.StatusOK,
+	})
+}
+
+func GetAllUsersByAdmin(c echo.Context) error {
+
+	role := c.Get("role").(int)
+
+	if role != 2 {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not an admin in GetAllUsers", nil)
+	}
+
+	var limit int = 10
+	var offSet int = 5
+
+	limitStr := c.QueryParam("limit")
+	offSetStr := c.QueryParam("offSet")
+
+	limit, _ = strconv.Atoi(limitStr)
+	offSet, _ = strconv.Atoi(offSetStr)
+
+	allUsers, err := models.GetAllUsers(limit, offSet)
+
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to fetch the user", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"users": allUsers,
 	})
 }
 
@@ -236,7 +272,7 @@ func UpdateAddress(c echo.Context) error {
 	if existingAddress.UserId != userid {
 		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to update the userid", nil)
 	}
-	
+
 	existingAddress.Street = updateRequest.StreetName
 	existingAddress.ZipCode = updateRequest.ZipCode
 	existingAddress.City = updateRequest.City
