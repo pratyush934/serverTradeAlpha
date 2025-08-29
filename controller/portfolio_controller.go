@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pratyush934/tradealpha/server/dto"
@@ -9,17 +10,6 @@ import (
 	"github.com/pratyush934/tradealpha/server/types"
 	"github.com/pratyush934/tradealpha/server/util"
 )
-
-/*
-CreatePortfolio
-
-GetPortfolioById
-
-
-UpdatePortfolio
-
-DeletePortfolio
-*/
 
 func CreatePortfolio(c echo.Context) error {
 	userId := c.Get("userId").(string)
@@ -134,6 +124,28 @@ func DeletePortFolio(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "PortFolioDelete successfully",
+	})
+
+}
+
+func UpdatePortFolioTotalValue(c echo.Context) error {
+
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	}
+
+	v := c.Param("value")
+
+	value, _ := strconv.Atoi(v)
+
+	if err := models.UpdateTotalValue(userId, value); err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update_value in UpdatePortFolioTotalValue", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"value": value,
 	})
 
 }
