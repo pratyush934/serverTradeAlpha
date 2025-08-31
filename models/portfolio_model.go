@@ -88,7 +88,7 @@ func UpdatePortFolio(portfolio PortFolio) error {
 	return database.DB.Updates(&portfolio).Error
 }
 
-func UpdateTotalValue(id string, value int) error {
+func UpdateTotalValue(id string, value float64) error {
 
 	if err := database.DB.Where("user_id = ? ", id).Update("total_value = ?", value).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetPortFolioById")

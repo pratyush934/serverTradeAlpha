@@ -14,6 +14,7 @@ type Stock struct {
 	Name           string             `gorm:"not null" json:"name"`
 	Sector         string             `json:"sector"`
 	Price          float64            `gorm:"not null" json:"price"`
+	Symbol         string             `json:"symbol"`
 	PortFolioStock []PortFolioStock   `gorm:"foreignKey:stockId" json:"portFolioStock"`
 	Transaction    []TransactionModel `gorm:"foreignKey:stockId" json:"transaction"`
 	CreatedAt      time.Time          `json:"createdAt"`
@@ -78,6 +79,20 @@ func GetAllStocks(limit, offset int) ([]Stock, error) {
 		return nil, err
 	}
 	return stock, nil
+}
+
+func GetStockBySymbol(symbol string) (*Stock, error) {
+	var stock Stock
+
+	if err := database.DB.
+		Where("symbol = ?", symbol).
+		Preload("PortFolioStock").
+		Preload("Transaction").
+		First(&stock).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in the GetStockBySymbol")
+	}
+
+	return &stock, nil
 }
 
 func UpdateStock(stock Stock) error {

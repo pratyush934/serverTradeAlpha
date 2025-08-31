@@ -33,6 +33,10 @@ func Server() {
 
 	e.POST("/login", controller.LoginController)
 
+	e.GET("/api/stocks/search", util.SearchStockHandler(&logger))
+	e.GET("/api/stocks/:symbol/quote", util.GetStockQuoteHandler(&logger))
+	e.GET("/api/stocks/:symbol/intraday", util.GetIntradayDataHandler(&logger))
+
 	_ = e.Start(":8080")
 
 }

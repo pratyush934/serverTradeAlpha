@@ -28,6 +28,7 @@ func CreatePortfolio(c echo.Context) error {
 		UserId:         userId,
 		Name:           portfolio.Name,
 		Title:          portfolio.Title,
+		TotalValue:     0,
 		Description:    portfolio.Description,
 		Transaction:    make([]models.TransactionModel, 0),
 		PortFolioStock: make([]models.PortFolioStock, 0),
@@ -138,7 +139,7 @@ func UpdatePortFolioTotalValue(c echo.Context) error {
 
 	v := c.Param("value")
 
-	value, _ := strconv.Atoi(v)
+	value, _ := strconv.ParseFloat(v, 2)
 
 	if err := models.UpdateTotalValue(userId, value); err != nil {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update_value in UpdatePortFolioTotalValue", err)

@@ -18,8 +18,8 @@ func AddPortfolioStock(c echo.Context) error {
 		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId in AddPortfolioStock", nil)
 	}
 
-	stockIdStr := c.Param("stockId")
-	portIdStr := c.Param("portId")
+	stockIdStr := c.QueryParam("stockId")
+	portIdStr := c.QueryParam("portId")
 
 	var portFolioStockDTO dto.PortFolioStockDTO
 

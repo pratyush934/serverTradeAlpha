@@ -52,7 +52,7 @@ func CreateTransaction(c echo.Context) error {
 	})
 }
 
-func GetPortFolioTransactionByUserId(c echo.Context) error {
+func GetTransactionByUserId(c echo.Context) error {
 	userId := c.Get("userId").(string)
 
 	if userId == "" {
@@ -205,4 +205,26 @@ func UpdateTransaction(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": "updated transaction",
 	})
+}
+
+func GetTransactionsByStockId(c echo.Context) error {
+
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	}
+
+	stockId := c.Param("stockId")
+
+	byStockId, err := models.GetTransactionsByStockId(stockId)
+
+	if err != nil {
+		return util.NewAppError(http.StatusOK, types.StatusBadRequest, "not able to get transaction by stockId", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"stockById": byStockId,
+	})
+
 }

@@ -83,35 +83,34 @@ func DeleteNotification(c echo.Context) error {
 
 }
 
-func UpdateNotification(c echo.Context) error {
-
-	userId := c.Get("userId").(string)
-
-	if userId == "" {
-		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "userId is not available in UpdateNotification", nil)
-	}
-
-	noticeId := c.Param("id")
-
-	var notification dto.NotificationDTO
-
-	if err := c.Bind(&notification); err != nil {
-		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to bind the notification", err)
-	}
-
-	newNotice := models.NotificationModel{
-		UserId:     userId,
-		Id:         noticeId,
-		Message:    notification.Message,
-		ReadStatus: notification.ReadStatus,
-	}
-
-	if err := models.UpdateNotification(&newNotice); err != nil {
-		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able the update notification", err)
-	}
-
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"message": "we did it",
-	})
-
-}
+//func UpdateNotification(c echo.Context) error {
+//
+//	userId := c.Get("userId").(string)
+//
+//	if userId == "" {
+//		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "userId is not available in UpdateNotification", nil)
+//	}
+//
+//	noticeId := c.Param("id")
+//
+//	var notification dto.NotificationDTO
+//
+//	if err := c.Bind(&notification); err != nil {
+//		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to bind the notification", err)
+//	}
+//
+//	newNotice := models.NotificationModel{
+//		Id:         noticeId,
+//		Message:    notification.Message,
+//		ReadStatus: notification.ReadStatus,
+//	}
+//
+//	if err := models.UpdateNotification(&newNotice); err != nil {
+//		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able the update notification", err)
+//	}
+//
+//	return c.JSON(http.StatusOK, map[string]interface{}{
+//		"message": "we did it",
+//	})
+//
+//}

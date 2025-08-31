@@ -166,3 +166,23 @@ func DeleteStock(c echo.Context) error {
 	})
 
 }
+
+func GetStockBySymbol(c echo.Context) error {
+	userId := c.Get("userId").(string)
+
+	if userId == "" {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	}
+
+	stockSymbol := c.Param("symbol")
+
+	stockBySymbol, err := models.GetStockBySymbol(stockSymbol)
+
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to get the stock by Symbol", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"stockBySymbol": stockBySymbol,
+	})
+}

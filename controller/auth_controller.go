@@ -42,7 +42,7 @@ func LoginController(c echo.Context) error {
 			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "Please check the err3", err3)
 		}
 
-		return c.JSON(http.StatusBadRequest, map[string]interface{}{
+		return c.JSON(http.StatusOK, map[string]interface{}{
 			"message": "the user already exist, Login Successful",
 			"email":   token,
 		})
