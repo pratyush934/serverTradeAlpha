@@ -54,11 +54,12 @@ func GetStockById(id string) (*Stock, error) {
 	return &stock, nil
 }
 
-func GetStockBySector(sector string) (*[]Stock, error) {
+func GetStockBySector(sector string, limit, offSet int) (*[]Stock, error) {
 	var stock []Stock
 	if err := database.DB.Where("sector = ?", sector).
 		Preload("PortFolioStock").
 		Preload("Transaction").
+		Limit(limit).Offset(offSet).
 		Find(&stock).Error; err != nil {
 		log.Error().Err(err).Msg("issue persist in stock_model/GetStockBySector")
 		return nil, err
