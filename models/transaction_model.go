@@ -1,10 +1,13 @@
 package models
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pratyush934/tradealpha/server/alphavantage"
 	"github.com/pratyush934/tradealpha/server/database"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
@@ -32,14 +35,6 @@ func (t *TransactionModel) BeforeCreate(tx *gorm.DB) error {
 func (t *TransactionModel) BeforeUpdate(tx *gorm.DB) error {
 	t.UpdatedAt = time.Now()
 	return nil
-}
-
-func (t *TransactionModel) CreateTransaction() (*TransactionModel, error) {
-	if err := database.DB.Create(t).Error; err != nil {
-		log.Error().Err(err).Msg("issue in transaction_model/CreateTransaction")
-		return nil, err
-	}
-	return t, nil
 }
 
 func GetTransactionById(id string) (*TransactionModel, error) {
@@ -92,4 +87,25 @@ func DeleteTransactionById(id string) error {
 		return err
 	}
 	return nil
+}
+
+func (t *TransactionModel) CreateTransaction(logger *zerolog.Logger) (*TransactionModel, error) {
+	quote, err := alphavantage.FetchQuote(t.StockId, logger)
+	if err != nil {
+		log.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to fetch stock quote")
+		return nil, err
+	}
+
+	price, err := strconv.ParseFloat(quote.GlobalQuote.Price, 64)
+	if err != nil {
+		log.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to parse stock price")
+		return nil, err
+	}
+	t.Price = price
+
+	if err := database.DB.Create(t).Error; err != nil {
+		log.Error().Err(err).Msg("issue in transaction_model/CreateTransaction")
+		return nil, err
+	}
+	return t, nil
 }

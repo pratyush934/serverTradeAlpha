@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -81,6 +82,18 @@ func DeleteNotification(c echo.Context) error {
 		"message": "Notification Deleted successfully",
 	})
 
+}
+
+func NotifyOnTransaction(transaction *models.TransactionModel) error {
+	notification := models.NotificationModel{
+		UserId:     transaction.UserId,
+		Message:    fmt.Sprintf("Transaction %s for %s: %d shares at $%.2f", transaction.Type, transaction.StockId, transaction.Quantity, transaction.Price),
+		ReadStatus: false,
+	}
+	if _, err := notification.CreateNotification(); err != nil {
+		return err
+	}
+	return nil
 }
 
 //func UpdateNotification(c echo.Context) error {

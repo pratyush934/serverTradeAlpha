@@ -2,7 +2,6 @@ package controller
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 	"github.com/pratyush934/tradealpha/server/dto"
@@ -130,23 +129,16 @@ func DeletePortFolio(c echo.Context) error {
 }
 
 func UpdatePortFolioTotalValue(c echo.Context) error {
-
 	userId := c.Get("userId").(string)
-
 	if userId == "" {
 		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
 	}
-
-	v := c.Param("value")
-
-	value, _ := strconv.ParseFloat(v, 2)
-
-	if err := models.UpdateTotalValue(userId); err != nil {
-		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update_value in UpdatePortFolioTotalValue", err)
+	portId := c.Param("id") // Assume param is portfolio ID, adjust if needed
+	err := models.UpdateTotalValue(portId)
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update total value", err)
 	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"value": value,
+		"message": "Total value updated",
 	})
-
 }

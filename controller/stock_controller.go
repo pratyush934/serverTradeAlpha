@@ -9,6 +9,7 @@ import (
 	"github.com/pratyush934/tradealpha/server/models"
 	"github.com/pratyush934/tradealpha/server/types"
 	"github.com/pratyush934/tradealpha/server/util"
+	"github.com/rs/zerolog"
 )
 
 func CreateStock(c echo.Context) error {
@@ -184,5 +185,22 @@ func GetStockBySymbol(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"stockBySymbol": stockBySymbol,
+	})
+}
+
+func FetchAndCacheStockHandler(c echo.Context) error {
+	userId := c.Get("userId").(string)
+	if userId == "" {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	}
+	symbol := c.Param("symbol")
+	logger := *c.Get("logger").(*zerolog.Logger)
+	stock, err := models.FetchAndCacheStock(symbol, &logger)
+	if err != nil {
+		return util.NewAppError(http.StatusInternalServerError, types.StatusInternalServerError, "failed to fetch and cache stock", err)
+	}
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": types.StatusOK,
+		"stock":   stock,
 	})
 }

@@ -19,6 +19,7 @@ type User struct {
 	ProfileImage       string              `json:"profileImage"`
 	AccountBalance     float64             `gorm:"default:0" json:"accountBalance"`
 	RoleId             int                 `gorm:"not null;default:1" json:"roleId"`
+	WatchList          []WatchListModel    `gorm:"foreignKey:userId" json:"watchList"`
 	Address            []AddressModel      `gorm:"foreignKey:userId" json:"address"`
 	PortFolio          []PortFolio         `gorm:"foreignKey:userId" json:"portFolio"`
 	Transactions       []TransactionModel  `gorm:"foreignKey:userId" json:"transactions"`
