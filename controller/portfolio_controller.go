@@ -141,7 +141,7 @@ func UpdatePortFolioTotalValue(c echo.Context) error {
 
 	value, _ := strconv.ParseFloat(v, 2)
 
-	if err := models.UpdateTotalValue(userId, value); err != nil {
+	if err := models.UpdateTotalValue(userId); err != nil {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to update_value in UpdatePortFolioTotalValue", err)
 	}
 

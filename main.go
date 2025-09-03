@@ -5,11 +5,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/pratyush934/tradealpha/server/alphavantage"
 	"github.com/pratyush934/tradealpha/server/controller"
 	"github.com/pratyush934/tradealpha/server/types"
 	"github.com/pratyush934/tradealpha/server/util"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func LoadDb() {
@@ -33,9 +36,9 @@ func Server() {
 
 	e.POST("/login", controller.LoginController)
 
-	e.GET("/api/stocks/search", util.SearchStockHandler(&logger))
-	e.GET("/api/stocks/:symbol/quote", util.GetStockQuoteHandler(&logger))
-	e.GET("/api/stocks/:symbol/intraday", util.GetIntradayDataHandler(&logger))
+	e.GET("/api/stocks/search", alphavantage.SearchStockHandler(&logger))
+	e.GET("/api/stocks/:symbol/quote", alphavantage.GetStockQuoteHandler(&logger))
+	e.GET("/api/stocks/:symbol/intraday", alphavantage.GetIntradayDataHandler(&logger))
 
 	_ = e.Start(":8080")
 
@@ -46,5 +49,11 @@ func Config() {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Error().Err(err).Msg("Not able to load the dotenv")
+		os.Exit(1)
+	}
+
 	Server()
 }

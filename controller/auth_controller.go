@@ -6,6 +6,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/pratyush934/tradealpha/server/dto"
+	"github.com/pratyush934/tradealpha/server/jwtpackage"
 	"github.com/pratyush934/tradealpha/server/models"
 	"github.com/pratyush934/tradealpha/server/types"
 	"github.com/pratyush934/tradealpha/server/util"
@@ -35,7 +36,7 @@ func LoginController(c echo.Context) error {
 			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "Please check the err2", err2)
 		}
 
-		token, err3 := util.CreateToken(candidate)
+		token, err3 := jwtpackage.CreateToken(candidate)
 
 		if err3 != nil {
 			log.Error().Err(err3).Msg("not able to generate token , err3")
@@ -65,7 +66,7 @@ func LoginController(c echo.Context) error {
 		})
 	}
 
-	token, err := util.CreateToken(user)
+	token, err := jwtpackage.CreateToken(user)
 
 	if err != nil {
 

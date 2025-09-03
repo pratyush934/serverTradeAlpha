@@ -1,9 +1,11 @@
 package models
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pratyush934/tradealpha/server/alphavantage"
 	"github.com/pratyush934/tradealpha/server/database"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
@@ -88,12 +90,34 @@ func UpdatePortFolio(portfolio PortFolio) error {
 	return database.DB.Updates(&portfolio).Error
 }
 
-func UpdateTotalValue(id string, value float64) error {
+func UpdateTotalValue(id string) error {
 
-	if err := database.DB.Where("user_id = ? ", id).Update("total_value = ?", value).Error; err != nil {
-		log.Error().Err(err).Msg("issue persist in the portfolio_model/GetPortFolioById")
+	portfolio, err := GetPortFolioById(id)
+	if err != nil {
+		log.Error().Err(err).Str("portfolio_id", id).Msg("Failed to fetch portfolio")
+		return err
+	}
+
+	var totalValue float64
+	for _, ps := range portfolio.PortFolioStock {
+
+		quote, err := alphavantage.FetchQuote(ps.StockId, &log.Logger)
+		if err != nil {
+			log.Error().Err(err).Str("stock_id", ps.StockId).Msg("Failed to fetch stock quote")
+			continue
+		}
+		price, err := strconv.ParseFloat(quote.GlobalQuote.Price, 64)
+		if err != nil {
+			log.Error().Err(err).Str("stock_id", ps.StockId).Msg("Failed to parse stock price")
+			continue
+		}
+		totalValue += float64(ps.Quantity) * price
+	}
+
+	portfolio.TotalValue = totalValue
+	if err := database.DB.Model(&PortFolio{}).Where("id = ?", id).Update("total_value", totalValue).Error; err != nil {
+		log.Error().Err(err).Str("portfolio_id", id).Msg("Failed to update portfolio total value")
 		return err
 	}
 	return nil
-
 }

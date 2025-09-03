@@ -1,10 +1,17 @@
 package models
 
 import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/pratyush934/tradealpha/server/alphavantage"
 	"github.com/pratyush934/tradealpha/server/database"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
@@ -97,6 +104,64 @@ func GetStockBySymbol(symbol string) (*Stock, error) {
 
 func UpdateStock(stock Stock) error {
 	return database.DB.Updates(&stock).Error
+}
+
+func FetchAndCacheStock(symbol string, logger *zerolog.Logger) (*Stock, error) {
+	// Fetch stock overview (for Name and Sector)
+	url := fmt.Sprintf("%s?function=OVERVIEW&symbol=%s&apikey=%s", alphavantage.AAlphaVantageBaseURL, symbol, os.Getenv("ALPHA_VANTAGE_KEY"))
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Error().Err(err).Str("symbol", symbol).Msg("Failed to fetch overview from Alpha Vantage")
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Error().Int("status", resp.StatusCode).Str("symbol", symbol).Msg("Alpha Vantage API returned non-200 status")
+		return nil, fmt.Errorf("alpha Vantage API error")
+	}
+
+	var overview struct {
+		Symbol string `json:"Symbol"`
+		Name   string `json:"Name"`
+		Sector string `json:"Sector"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&overview); err != nil {
+		log.Error().Err(err).Str("symbol", symbol).Msg("Failed to parse overview response")
+		return nil, err
+	}
+
+	if overview.Symbol == "" {
+		log.Error().Str("symbol", symbol).Msg("Invalid symbol or no data returned")
+		return nil, fmt.Errorf("invalid stock symbol")
+	}
+
+	// Check if stock exists
+	stock, err := GetStockBySymbol(symbol)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Error().Err(err).Str("symbol", symbol).Msg("Failed to check existing stock")
+		return nil, err
+	}
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		stock = &Stock{
+			Symbol: symbol,
+			Name:   overview.Name,
+			Sector: overview.Sector,
+		}
+		if _, err := stock.CreateStock(); err != nil {
+			return nil, err
+		}
+	} else {
+		stock.Name = overview.Name
+		stock.Sector = overview.Sector
+		if err := UpdateStock(*stock); err != nil {
+			log.Error().Err(err).Str("symbol", symbol).Msg("Failed to update stock")
+			return nil, err
+		}
+	}
+
+	return stock, nil
 }
 
 func DeleteStock(id string) error {
