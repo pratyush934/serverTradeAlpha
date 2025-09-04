@@ -17,15 +17,16 @@ import (
 )
 
 type Stock struct {
-	Id             string             `gorm:"primaryKey;type:varchar(151)" json:"id"`
-	Name           string             `gorm:"not null" json:"name"`
-	Sector         string             `json:"sector"`
-	Price          float64            `gorm:"not null" json:"price"`
-	Symbol         string             `json:"symbol"`
-	PortFolioStock []PortFolioStock   `gorm:"foreignKey:stockId" json:"portFolioStock"`
-	Transaction    []TransactionModel `gorm:"foreignKey:stockId" json:"transaction"`
-	CreatedAt      time.Time          `json:"createdAt"`
-	UpdatedAt      time.Time          `json:"updatedAt"`
+	Id             string                `gorm:"primaryKey;type:varchar(151)" json:"id"`
+	Name           string                `gorm:"not null" json:"name"`
+	Sector         string                `json:"sector"`
+	Price          float64               `gorm:"not null" json:"price"`
+	Symbol         string                `json:"symbol"`
+	WatchListStock []WatchListStockModel `gorm:"foreignKey:stockId" json:"watchListStock"`
+	PortFolioStock []PortFolioStock      `gorm:"foreignKey:stockId" json:"portFolioStock"`
+	Transaction    []TransactionModel    `gorm:"foreignKey:stockId" json:"transaction"`
+	CreatedAt      time.Time             `json:"createdAt"`
+	UpdatedAt      time.Time             `json:"updatedAt"`
 }
 
 func (s *Stock) BeforeCreate(tx *gorm.DB) error {
@@ -53,6 +54,7 @@ func GetStockById(id string) (*Stock, error) {
 	var stock Stock
 	if err := database.DB.
 		Where("stock_id = ?", id).
+		Preload("WatchListStock").
 		Preload("PortFolioStock").
 		Preload("Transaction").
 		First(&stock).Error; err != nil {
@@ -65,6 +67,7 @@ func GetStockById(id string) (*Stock, error) {
 func GetStockBySector(sector string, limit, offSet int) (*[]Stock, error) {
 	var stock []Stock
 	if err := database.DB.Where("sector = ?", sector).
+		Preload("WatchListStock").
 		Preload("PortFolioStock").
 		Preload("Transaction").
 		Limit(limit).Offset(offSet).
@@ -78,6 +81,7 @@ func GetStockBySector(sector string, limit, offSet int) (*[]Stock, error) {
 func GetAllStocks(limit, offset int) ([]Stock, error) {
 	var stock []Stock
 	if err := database.DB.
+		Preload("WatchListStock").
 		Preload("PortFolioStock").
 		Preload("Transaction").
 		Limit(limit).Offset(offset).
@@ -93,6 +97,7 @@ func GetStockBySymbol(symbol string) (*Stock, error) {
 
 	if err := database.DB.
 		Where("symbol = ?", symbol).
+		Preload("WatchListStock").
 		Preload("PortFolioStock").
 		Preload("Transaction").
 		First(&stock).Error; err != nil {

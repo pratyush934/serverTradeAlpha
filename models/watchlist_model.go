@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,16 +19,6 @@ type WatchListModel struct {
 	CreatedAt      time.Time             `json:"createdAt"`
 	UpdatedAt      time.Time             `json:"updatedAt"`
 }
-
-/*
-CreateWatchlist: Creates a new watchlist for a user.
-GetWatchlistById: Retrieves a watchlist by ID, preloading stocks.
-GetWatchlistsByUserId: Fetches all watchlists for a user.
-DeleteWatchlist: Deletes a watchlist by ID.
-AddStockToWatchlist: Adds a stock to a watchlist.
-RemoveStockFromWatchlist: Removes a stock from a watchlist.
-GetWatchlistStocks: Retrieves all stocks in a watchlist.
-*/
 
 func (w *WatchListModel) BeforeCreate(tx *gorm.DB) error {
 	w.Id = uuid.New().String()
@@ -61,4 +52,84 @@ func GetWatchListsByUserId(userId string) (*[]WatchListModel, error) {
 		return nil, err
 	}
 	return &watchList, nil
+}
+
+func AddStockToWatchlist(watchlistId, stockId string) error {
+	// Verify watchlist exists
+	_, err := GetWatchListById(watchlistId)
+	if err != nil {
+		log.Error().Err(err).Str("watchlist_id", watchlistId).Msg("Failed to find watchlist")
+		return err
+	}
+
+	// Verify stock exists
+	_, err = GetStockBySymbol(stockId)
+	if err != nil {
+		log.Error().Err(err).Str("stock_id", stockId).Msg("Failed to find stock")
+		return err
+	}
+
+	// Check if stock is already in watchlist
+	var existing WatchListStockModel
+	if err := database.DB.Where("watchlist_id = ? AND stock_id = ?", watchlistId, stockId).First(&existing).Error; err == nil {
+		log.Warn().Str("watchlist_id", watchlistId).Str("stock_id", stockId).Msg("Stock already in watchlist")
+		return fmt.Errorf("stock already in watchlist")
+	}
+
+	// Add stock to watchlist
+	watchlistStock := WatchListStockModel{
+		WatchListId: watchlistId,
+		StockId:     stockId,
+	}
+	if _, err := watchlistStock.CreateWatchListStockModel(); err != nil {
+		log.Error().Err(err).Str("watchlist_id", watchlistId).Str("stock_id", stockId).Msg("Failed to add stock to watchlist")
+		return err
+	}
+
+	log.Info().Str("watchlist_id", watchlistId).Str("stock_id", stockId).Msg("Stock added to watchlist")
+	return nil
+}
+
+func RemoveStockFromWatchlist(watchlistId, stockId string) error {
+	// Verify watchlist exists
+	if _, err := GetWatchListById(watchlistId); err != nil {
+		log.Error().Err(err).Str("watchlist_id", watchlistId).Msg("Failed to find watchlist")
+		return err
+	}
+
+	// Delete stock from watchlist
+	if err := database.DB.Where("watchlist_id = ? AND stock_id = ?", watchlistId, stockId).Delete(&WatchListStockModel{}).Error; err != nil {
+		log.Error().Err(err).Str("watchlist_id", watchlistId).Str("stock_id", stockId).Msg("Failed to remove stock from watchlist")
+		return err
+	}
+
+	log.Info().Str("watchlist_id", watchlistId).Str("stock_id", stockId).Msg("Stock removed from watchlist")
+
+	return nil
+}
+
+func DeleteWatchList(id string) error {
+	return database.DB.Where("id = ?", id).Delete(&WatchListModel{}).Error
+}
+
+func GetAllWatchListStocksByUserId(userId string) ([]WatchListStockModel, error) {
+	var watchLists []WatchListModel
+	if err := database.DB.Where("user_id = ?", userId).Find(&watchLists).Error; err != nil {
+		return nil, err
+	}
+
+	var allStocks []WatchListStockModel
+	for _, wl := range watchLists {
+		var stocks []WatchListStockModel
+		if err := database.DB.Where(&WatchListStockModel{WatchListId: wl.Id}).Find(&stocks).Error; err != nil {
+			log.Error().Err(err).Msg("issue persist in the GetAllWatchListStocksByUserId")
+			return nil, err
+		}
+		allStocks = append(allStocks, stocks...)
+	}
+	return allStocks, nil
+}
+
+func UpdateWatchlist(w WatchListModel) error {
+	return database.DB.Updates(&w).Error
 }
