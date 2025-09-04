@@ -261,3 +261,58 @@ func GetIntradayDataHandler(logger *zerolog.Logger) echo.HandlerFunc {
 		})
 	}
 }
+
+type DailyResponse struct {
+	MetaData struct {
+		Information   string `json:"1. Information"`
+		Symbol        string `json:"2. Symbol"`
+		LastRefreshed string `json:"3. Last Refreshed"`
+		OutputSize    string `json:"4. Output Size"`
+		TimeZone      string `json:"5. Time Zone"`
+	} `json:"Meta Data"`
+	TimeSeries map[string]struct {
+		Open   string `json:"1. open"`
+		High   string `json:"2. high"`
+		Low    string `json:"3. low"`
+		Close  string `json:"4. close"`
+		Volume string `json:"5. volume"`
+	} `json:"Time Series (Daily)"`
+}
+
+func GetDailyDataHandler(logger *zerolog.Logger) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		symbol := c.Param("symbol")
+		if symbol == "" {
+			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "symbol is required", nil)
+		}
+
+		apiKey := os.Getenv("ALPHA_VANTAGE_KEY") // Replace with env variable or config
+		url := fmt.Sprintf("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&apikey=%s", symbol, apiKey)
+
+		resp, err := http.Get(url)
+		if err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to fetch daily data from Alpha Vantage")
+			return util.NewAppError(http.StatusInternalServerError, types.StatusInternalServerError, "failed to fetch daily data", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			logger.Error().Str("symbol", symbol).Int("status", resp.StatusCode).Msg("Alpha Vantage API returned non-200 status")
+			return util.NewAppError(http.StatusBadGateway, types.StatusBadGateway, "Alpha Vantage API error", nil)
+		}
+
+		var dailyData DailyResponse
+		if err := json.NewDecoder(resp.Body).Decode(&dailyData); err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to parse daily data response")
+			return util.NewAppError(http.StatusInternalServerError, types.StatusInternalServerError, "failed to parse daily data", err)
+		}
+
+		if _, ok := dailyData.TimeSeries["Error Message"]; ok {
+			logger.Error().Str("symbol", symbol).Msg("Invalid symbol or API error")
+			return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "invalid symbol or API error", nil)
+		}
+
+		logger.Info().Str("symbol", symbol).Msg("Successfully fetched daily data")
+		return c.JSON(http.StatusOK, dailyData)
+	}
+}

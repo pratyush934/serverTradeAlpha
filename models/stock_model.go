@@ -113,6 +113,7 @@ func UpdateStock(stock Stock) error {
 
 func FetchAndCacheStock(symbol string, logger *zerolog.Logger) (*Stock, error) {
 	// Fetch stock overview (for Name and Sector)
+
 	url := fmt.Sprintf("%s?function=OVERVIEW&symbol=%s&apikey=%s", alphavantage.AAlphaVantageBaseURL, symbol, os.Getenv("ALPHA_VANTAGE_KEY"))
 	resp, err := http.Get(url)
 	if err != nil {
@@ -131,6 +132,7 @@ func FetchAndCacheStock(symbol string, logger *zerolog.Logger) (*Stock, error) {
 		Name   string `json:"Name"`
 		Sector string `json:"Sector"`
 	}
+
 	if err := json.NewDecoder(resp.Body).Decode(&overview); err != nil {
 		log.Error().Err(err).Str("symbol", symbol).Msg("Failed to parse overview response")
 		return nil, err

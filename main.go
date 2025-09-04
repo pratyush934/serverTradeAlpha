@@ -39,6 +39,7 @@ func Server() {
 	e.GET("/api/stocks/search", alphavantage.SearchStockHandler(&logger))
 	e.GET("/api/stocks/:symbol/quote", alphavantage.GetStockQuoteHandler(&logger))
 	e.GET("/api/stocks/:symbol/intraday", alphavantage.GetIntradayDataHandler(&logger))
+	e.GET("/api/stocks/:symbol/daily", alphavantage.GetDailyDataHandler(&logger))
 
 	_ = e.Start(":8080")
 

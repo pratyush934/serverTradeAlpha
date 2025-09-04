@@ -12,16 +12,18 @@ import (
 )
 
 type PortFolio struct {
-	Id             string             `gorm:"primaryKey;type:varchar(151)" json:"id"`
-	UserId         string             `gorm:"not null" json:"userId"`
-	Name           string             `gorm:"not null" json:"name"`
-	Title          string             `gorm:"not null" json:"title"`
-	TotalValue     float64            `gorm:"default:0" json:"totalValue"`
-	Description    string             `gorm:"not null" json:"description"`
-	Transaction    []TransactionModel `gorm:"foreignKey:portFolioId" json:"transaction"`
-	PortFolioStock []PortFolioStock   `gorm:"foreignKey:portFolioId" json:"portFolioStock"`
-	CreatedAt      time.Time          `json:"createdAt"`
-	UpdatedAt      time.Time          `json:"updatedAt"`
+	Id              string             `gorm:"primaryKey;type:varchar(151)" json:"id"`
+	UserId          string             `gorm:"not null" json:"userId"`
+	Name            string             `gorm:"not null" json:"name"`
+	Title           string             `gorm:"not null" json:"title"`
+	TotalValue      float64            `gorm:"default:0" json:"totalValue"`
+	UnRealizedGains float64            `gorm:"default:0" json:"unRealizedGains"`
+	RealizedGains   float64            `gorm:"default:0" json:"realizedGains"`
+	Description     string             `gorm:"not null" json:"description"`
+	Transaction     []TransactionModel `gorm:"foreignKey:portFolioId" json:"transaction"`
+	PortFolioStock  []PortFolioStock   `gorm:"foreignKey:portFolioId" json:"portFolioStock"`
+	CreatedAt       time.Time          `json:"createdAt"`
+	UpdatedAt       time.Time          `json:"updatedAt"`
 }
 
 func (p *PortFolio) BeforeCreate(tx *gorm.DB) error {
@@ -98,7 +100,7 @@ func UpdateTotalValue(id string) error {
 		return err
 	}
 
-	var totalValue float64
+	var totalValue, unRealizedGains float64
 	for _, ps := range portfolio.PortFolioStock {
 
 		quote, err := alphavantage.FetchQuote(ps.StockId, &log.Logger)
@@ -112,12 +114,45 @@ func UpdateTotalValue(id string) error {
 			continue
 		}
 		totalValue += float64(ps.Quantity) * price
+		unRealizedGains += float64(ps.Quantity) * (price - ps.AveragePrice)
 	}
 
-	portfolio.TotalValue = totalValue
-	if err := database.DB.Model(&PortFolio{}).Where("id = ?", id).Update("total_value", totalValue).Error; err != nil {
-		log.Error().Err(err).Str("portfolio_id", id).Msg("Failed to update portfolio total value")
+	transactionsByPortfolioId, err := GetTransactionsByPortfolioId(id)
+
+	if err != nil {
+		log.Error().Err(err).Msg("there is an issue in portfolio_model/UpdateTotalValue")
 		return err
 	}
+
+	var realizedGains float64
+	for _, tx := range transactionsByPortfolioId {
+		if tx.Type == "sell" {
+			idAndPortfolioId, err := GetPortfolioStockByStockIdAndPortfolioId(tx.StockId, id)
+
+			if err != nil || len(*idAndPortfolioId) == 0 {
+				log.Error().Err(err).Msg("aha aha aha aha")
+				return err
+			}
+			averagePrice := (*idAndPortfolioId)[0].AveragePrice
+			realizedGains += float64(tx.Quantity) * (tx.Price - averagePrice)
+		}
+	}
+
+	updates := map[string]interface{}{
+		"total_value":      totalValue,
+		"unrealized_gains": unRealizedGains,
+		"realized_gains":   realizedGains,
+	}
+
+	if err := database.DB.Model(&PortFolioStock{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+		log.Error().Err(err).Msg("issue persist in updating the UpdateTotalValue")
+		return err
+	}
+
+	log.Info().Float64("total_value", totalValue).
+		Float64("unrealized_gains", unRealizedGains).
+		Float64("realized_gains", realizedGains).
+		Msg("You did it")
+
 	return nil
 }

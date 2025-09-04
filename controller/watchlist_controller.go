@@ -108,13 +108,13 @@ func AddStockToWatchlistHandler(c echo.Context) error {
 	}
 
 	watchId := c.QueryParam("watchListId")
-	stockId := c.QueryParam("stockId")
+	symbol := c.QueryParam("symbol")
 
-	if watchId == "" || stockId == "" {
+	if watchId == "" || symbol == "" {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadGateway, "not able to get the watchId or stockId", nil)
 	}
-	
-	if err := models.AddStockToWatchlist(watchId, stockId); err != nil {
+
+	if err := models.AddStockToWatchlist(watchId, symbol); err != nil {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to add the stock to watchlist", err)
 	}
 
@@ -130,13 +130,13 @@ func RemoveStockFromWatchlistHandler(c echo.Context) error {
 	}
 
 	watchId := c.QueryParam("watchListId")
-	stockId := c.QueryParam("stockId")
+	symbol := c.QueryParam("symbol")
 
-	if watchId == "" || stockId == "" {
+	if watchId == "" || symbol == "" {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadGateway, "not able to get the watchId or stockId", nil)
 	}
 
-	if err := models.RemoveStockFromWatchlist(watchId, stockId); err != nil {
+	if err := models.RemoveStockFromWatchlist(watchId, symbol); err != nil {
 		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "not able to add the stock to watchlist", err)
 	}
 
