@@ -142,3 +142,34 @@ func UpdatePortFolioTotalValue(c echo.Context) error {
 		"message": "Total value updated",
 	})
 }
+
+func GetPortfolioMetrics(c echo.Context) error {
+	userId := c.Get("userId").(string)
+	if userId == "" {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	}
+	portId := c.Param("id")
+	if portId == "" {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "portfolio ID is required", nil)
+	}
+
+	portfolio, err := models.GetPortFolioById(portId)
+	if err != nil {
+		return util.NewAppError(http.StatusBadRequest, types.StatusBadRequest, "failed to fetch portfolio", err)
+	}
+	if portfolio.UserId != userId {
+		return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "user not authorized for this portfolio", nil)
+	}
+
+	// Ensure metrics are up-to-date
+	if err := models.UpdateTotalValue(portId); err != nil {
+		return util.NewAppError(http.StatusInternalServerError, types.StatusInternalServerError, "failed to update portfolio metrics", err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message":          types.StatusOK,
+		"total_value":      portfolio.TotalValue,
+		"unrealized_gains": portfolio.UnRealizedGains,
+		"realized_gains":   portfolio.RealizedGains,
+	})
+}

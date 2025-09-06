@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -315,4 +317,97 @@ func GetDailyDataHandler(logger *zerolog.Logger) echo.HandlerFunc {
 		logger.Info().Str("symbol", symbol).Msg("Successfully fetched daily data")
 		return c.JSON(http.StatusOK, dailyData)
 	}
+}
+
+//var popularStocks = []string{
+//	"AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NVDA", "JPM", "WMT", "V",
+//	"PG", "NFLX", "DIS", "BAC", "INTC", "CSCO", "PFE", "XOM", "KO", "PEP",
+//}
+
+var popularStocks = []string{
+	"AAPL",
+}
+
+type DailyMover struct {
+	Symbol           string  `json:"symbol"`
+	Name             string  `json:"name"`
+	Price            float64 `json:"price"`
+	PercentageChange float64 `json:"percentageChange"`
+}
+
+func FetchDailyMovers(logger *zerolog.Logger) ([]DailyMover, error) {
+	var movers []DailyMover
+	for _, symbol := range popularStocks {
+		url := fmt.Sprintf("https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=%s&outputsize=compact&apikey=%s", symbol, os.Getenv("ALPHA_VANTAGE_KEY"))
+		resp, err := http.Get(url)
+
+		if err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to fetch daily data")
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			logger.Error().Str("symbol", symbol).Int("status", resp.StatusCode).Msg("Alpha Vantage API error")
+			continue
+		}
+
+		var dailyData DailyResponse
+		if err := json.NewDecoder(resp.Body).Decode(&dailyData); err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to parse daily data")
+			continue
+		}
+
+		if len(dailyData.TimeSeries) < 2 {
+			logger.Warn().Str("symbol", symbol).Msg("Insufficient daily data")
+			continue
+		}
+
+		// Get latest and previous day's close prices
+		var latestDate, prevDate string
+		for date := range dailyData.TimeSeries {
+			if latestDate == "" || date > latestDate {
+				prevDate = latestDate
+				latestDate = date
+			} else if prevDate == "" || date > prevDate {
+				prevDate = date
+			}
+		}
+
+		latestClose, _ := strconv.ParseFloat(dailyData.TimeSeries[latestDate].Close, 64)
+		prevClose, _ := strconv.ParseFloat(dailyData.TimeSeries[prevDate].Close, 64)
+		percentageChange := ((latestClose - prevClose) / prevClose) * 100
+
+		// Fetch stock name (using OVERVIEW for simplicity)
+		overviewURL := fmt.Sprintf("https://www.alphavantage.co/query?function=OVERVIEW&symbol=%s&apikey=%s", symbol, os.Getenv("ALPHA_VANTAGE_KEY"))
+		overviewResp, err := http.Get(overviewURL)
+		if err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to fetch overview")
+			continue
+		}
+
+		var overview struct {
+			Name string `json:"Name"`
+		}
+		if err := json.NewDecoder(overviewResp.Body).Decode(&overview); err != nil {
+			logger.Error().Err(err).Str("symbol", symbol).Msg("Failed to parse overview")
+			continue
+		}
+
+		movers = append(movers, DailyMover{
+			Symbol:           symbol,
+			Name:             overview.Name,
+			Price:            latestClose,
+			PercentageChange: percentageChange,
+		})
+
+		overviewResp.Body.Close()
+		resp.Body.Close()
+	}
+
+	// Sort by percentage change (descending for gainers, ascending for losers)
+	sort.Slice(movers, func(i, j int) bool {
+		return movers[i].PercentageChange > movers[j].PercentageChange
+	})
+
+	return movers, nil
 }

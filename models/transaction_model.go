@@ -92,20 +92,28 @@ func DeleteTransactionById(id string) error {
 func (t *TransactionModel) CreateTransaction(logger *zerolog.Logger) (*TransactionModel, error) {
 	quote, err := alphavantage.FetchQuote(t.StockId, logger)
 	if err != nil {
-		log.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to fetch stock quote")
+		logger.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to fetch stock quote")
 		return nil, err
 	}
 
 	price, err := strconv.ParseFloat(quote.GlobalQuote.Price, 64)
 	if err != nil {
-		log.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to parse stock price")
+		logger.Error().Err(err).Str("stock_id", t.StockId).Msg("Failed to parse stock price")
 		return nil, err
 	}
 	t.Price = price
 
 	if err := database.DB.Create(t).Error; err != nil {
-		log.Error().Err(err).Msg("issue in transaction_model/CreateTransaction")
+		logger.Error().Err(err).Msg("issue in transaction_model/CreateTransaction")
 		return nil, err
 	}
+
+	// Update portfolio metrics after transaction
+	if err := UpdateTotalValue(t.PortFolioId); err != nil {
+		logger.Error().Err(err).Str("portfolio_id", t.PortFolioId).Msg("Failed to update portfolio metrics after transaction")
+		// Log error but don’t fail transaction
+		return nil, err
+	}
+
 	return t, nil
 }

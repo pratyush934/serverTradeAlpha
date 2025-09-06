@@ -2,9 +2,11 @@ package controller
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
+	"github.com/pratyush934/tradealpha/server/alphavantage"
 	"github.com/pratyush934/tradealpha/server/dto"
 	"github.com/pratyush934/tradealpha/server/models"
 	"github.com/pratyush934/tradealpha/server/types"
@@ -202,5 +204,35 @@ func FetchAndCacheStockHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]interface{}{
 		"message": types.StatusOK,
 		"stock":   stock,
+	})
+}
+
+func GetDailyMoversHandler(c echo.Context) error {
+	//userId := c.Get("userId").(string)
+	//if userId == "" {
+	//	return util.NewAppError(http.StatusUnauthorized, types.StatusUnauthorized, "not able to get the userId", nil)
+	//}
+
+	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	movers, err := alphavantage.FetchDailyMovers(&logger)
+	if err != nil {
+		return util.NewAppError(http.StatusInternalServerError, types.StatusInternalServerError, "failed to fetch market movers", err)
+	}
+
+	// Split into gainers (top 10 positive) and losers (top 10 negative)
+	var gainers []alphavantage.DailyMover
+	var losers []alphavantage.DailyMover
+	for _, mover := range movers {
+		if mover.PercentageChange > 0 && len(gainers) < 10 {
+			gainers = append(gainers, mover)
+		} else if mover.PercentageChange < 0 && len(losers) < 10 {
+			losers = append(losers, mover)
+		}
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"message": types.StatusOK,
+		"gainers": gainers,
+		"losers":  losers,
 	})
 }
